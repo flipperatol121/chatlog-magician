@@ -416,6 +416,7 @@ function detectColorClass(text, isHighlighted, anyHighlighted) {
     }
 
     var isHealthFull = /Your health is already full/.test(trimmedText);
+    var hasExclamation = /\[!\]/.test(trimmedText);
 
     if (isHighlighted && !isInfo && !isError && !isAdminBan && !isAFKCheck && !isFactionMembers && !isOnlineFactionMembers && !isFactionMemberList && !isFactionCount) {
         if (isLow) {
@@ -435,6 +436,10 @@ function detectColorClass(text, isHighlighted, anyHighlighted) {
                 return 'unhighlightedSays';
             }
         }
+    }
+
+    if (hasExclamation) {
+        return 'toyou';
     }
 
     if (isPayment) {
@@ -673,6 +678,15 @@ function applyColorClass(text, colorClass) {
     var isCurrentTime = /^Current Time:/.test(text);
     var isIllegalSupplier = /^Illegal Supplier-Status:/.test(text);
     var isSeparator = /^=+$/.test(text);
+
+    var hasExclamation = /\[!\]/.test(temp);
+
+    if (colorClass === 'toyou' || hasExclamation) {
+        if (hasExclamation) {
+            temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+        }
+        return '<span class="white">' + temp + '</span>';
+    }
 
     switch (colorClass) {
         case 'highlighted':
@@ -1202,7 +1216,7 @@ $(document).ready(function() {
 
     $("#line-break").bind("input propertychange", function() {
         var newWrap = parseInt($(this).val()) || 70;
-        if (newWrap >= 20 && newWrap <= 200) {
+        if (newWrap >= 20 && newWrap <= 400) {
             $.jStorage.set("lastLineWrap", newWrap);
             renderChatlog();
         }

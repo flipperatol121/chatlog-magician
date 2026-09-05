@@ -169,20 +169,22 @@ function wrapAndSplit(text, width) {
         var currentLine = '';
         for (var i = 0; i < words.length; i++) {
             var word = words[i];
-            if (currentLine.length + word.length + 1 <= width) {
+            if (word.length > width) {
+                if (currentLine) {
+                    lines.push(currentLine.trim());
+                    currentLine = '';
+                }
+                for (var j = 0; j < word.length; j += Math.floor(width * 0.8)) {
+                    var chunk = word.substring(j, Math.min(j + Math.floor(width * 0.8), word.length));
+                    if (chunk) {
+                        lines.push(chunk.trim());
+                    }
+                }
+            } else if (currentLine.length + word.length + 1 <= width) {
                 currentLine += (currentLine ? ' ' : '') + word;
             } else {
                 if (currentLine) lines.push(currentLine.trim());
-                if (word.length > width) {
-                    var remaining = word;
-                    while (remaining.length > width) {
-                        lines.push(remaining.substring(0, width).trim());
-                        remaining = remaining.substring(width);
-                    }
-                    currentLine = remaining;
-                } else {
-                    currentLine = word;
-                }
+                currentLine = word;
             }
         }
         if (currentLine) lines.push(currentLine.trim());
@@ -215,25 +217,65 @@ function wrapAndSplit(text, width) {
     for (var i = 0; i < wordPositions.length; i++) {
         var wordData = wordPositions[i];
         var word = wordData.word;
+        var wordLength = word.length;
 
-        if (currentLineLength + word.length + (currentLineWords.length > 0 ? 1 : 0) <= width) {
+        if (wordLength > width) {
+            if (currentLineWords.length > 0) {
+                var lineText = buildLineFromWordData(currentLineWords, tokens);
+                lineText = lineText.replace(/\s+$/, '');
+                lines.push(lineText);
+                currentLineWords = [];
+                currentLineLength = 0;
+            }
+            
+            var chars = word.split('');
+            var currentWordChunk = '';
+            for (var j = 0; j < chars.length; j++) {
+                currentWordChunk += chars[j];
+                if (currentWordChunk.length >= Math.floor(width * 0.8) || j === chars.length - 1) {
+                    var chunkData = {
+                        tokenIndex: wordData.tokenIndex,
+                        word: currentWordChunk,
+                        startPos: wordData.startPos + (j - currentWordChunk.length + 1),
+                        endPos: wordData.startPos + j + 1
+                    };
+                    
+                    if (currentLineLength + currentWordChunk.length + (currentLineWords.length > 0 ? 1 : 0) <= width) {
+                        currentLineWords.push(chunkData);
+                        currentLineLength += currentWordChunk.length + (currentLineWords.length > 1 ? 1 : 0);
+                    } else {
+                        if (currentLineWords.length > 0) {
+                            var lineText = buildLineFromWordData(currentLineWords, tokens);
+                            lineText = lineText.replace(/\s+$/, '');
+                            lines.push(lineText);
+                            currentLineWords = [];
+                            currentLineLength = 0;
+                        }
+                        currentLineWords.push(chunkData);
+                        currentLineLength = currentWordChunk.length;
+                    }
+                    currentWordChunk = '';
+                }
+            }
+            continue;
+        }
+
+        if (currentLineLength + wordLength + (currentLineWords.length > 0 ? 1 : 0) <= width) {
             currentLineWords.push(wordData);
-            currentLineLength += word.length + (currentLineWords.length > 1 ? 1 : 0);
+            currentLineLength += wordLength + (currentLineWords.length > 1 ? 1 : 0);
         } else {
             if (currentLineWords.length > 0) {
                 var lineText = buildLineFromWordData(currentLineWords, tokens);
-                // Remove trailing spaces
                 lineText = lineText.replace(/\s+$/, '');
                 lines.push(lineText);
             }
             currentLineWords = [wordData];
-            currentLineLength = word.length;
+            currentLineLength = wordLength;
         }
     }
 
     if (currentLineWords.length > 0) {
         var lineText = buildLineFromWordData(currentLineWords, tokens);
-        // Remove trailing spaces
         lineText = lineText.replace(/\s+$/, '');
         lines.push(lineText);
     }
