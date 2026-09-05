@@ -65,99 +65,96 @@ function applyColorToSelection(color) {
         sel.addRange(savedSelection);
         
         var range = savedSelection;
-        var selectedText = range.toString();
         
-        if (!selectedText.trim()) {
-            alert('No text selected.');
-            return;
-        }
-
-        var container = range.commonAncestorContainer;
-        var $container = $(container).closest('.generated');
+        var selectedNodes = [];
+        var node = range.startContainer;
         
-        if ($container.length === 0) {
-            var parent = $(container).parents('.generated');
-            if (parent.length > 0) {
-                $container = parent;
-            } else {
-                var allGenerated = $('.generated');
-                for (var i = 0; i < allGenerated.length; i++) {
-                    if ($(allGenerated[i]).find(container).length > 0 || $(allGenerated[i]).has(container).length > 0) {
-                        $container = $(allGenerated[i]);
-                        break;
+        if (range.startContainer === range.endContainer && range.startContainer.nodeType === 3) {
+            selectedNodes.push({
+                node: range.startContainer,
+                startOffset: range.startOffset,
+                endOffset: range.endOffset
+            });
+        } else {
+            var walker = document.createTreeWalker(
+                range.commonAncestorContainer,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        if (node === range.startContainer) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        if (node === range.endContainer) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        if (range.intersectsNode && range.intersectsNode(node)) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        var nodeRange = document.createRange();
+                        nodeRange.selectNode(node);
+                        var startCompare = nodeRange.compareBoundaryPoints(Range.START_TO_START, range);
+                        var endCompare = nodeRange.compareBoundaryPoints(Range.END_TO_END, range);
+                        if (startCompare >= 0 && endCompare <= 0) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_REJECT;
                     }
+                },
+                false
+            );
+            
+            var currentNode;
+            while (currentNode = walker.nextNode()) {
+                var startOffset = 0;
+                var endOffset = currentNode.textContent.length;
+                if (currentNode === range.startContainer) {
+                    startOffset = range.startOffset;
                 }
+                if (currentNode === range.endContainer) {
+                    endOffset = range.endOffset;
+                }
+                selectedNodes.push({
+                    node: currentNode,
+                    startOffset: startOffset,
+                    endOffset: endOffset
+                });
             }
         }
 
-        if ($container.length === 0) {
-            alert('Could not find the text to color. Please select text within the output area.');
+        if (selectedNodes.length === 0) {
+            alert('No text selected. Please select some text first.');
             return;
         }
 
-        var fullText = $container.text();
-        var startIndex = fullText.indexOf(selectedText);
+        for (var i = 0; i < selectedNodes.length; i++) {
+            var data = selectedNodes[i];
+            var node = data.node;
+            var text = node.textContent;
+            var startOffset = data.startOffset;
+            var endOffset = data.endOffset;
+            
+            if (startOffset === endOffset) continue;
+            
+            var fragment = document.createDocumentFragment();
+            
+            if (startOffset > 0) {
+                fragment.appendChild(document.createTextNode(text.substring(0, startOffset)));
+            }
+            
+            var span = document.createElement('span');
+            span.style.color = color;
+            span.textContent = text.substring(startOffset, endOffset);
+            fragment.appendChild(span);
+            
+            if (endOffset < text.length) {
+                fragment.appendChild(document.createTextNode(text.substring(endOffset)));
+            }
+            
+            node.parentNode.replaceChild(fragment, node);
+        }
         
-        if (startIndex === -1) {
-            var trimmedFull = fullText.trim();
-            var trimmedSelected = selectedText.trim();
-            startIndex = trimmedFull.indexOf(trimmedSelected);
-            if (startIndex !== -1) {
-                var leadingWS = fullText.indexOf(trimmedFull);
-                startIndex = leadingWS + startIndex;
-            }
-        }
-
-        if (startIndex === -1) {
-            try {
-                var span = document.createElement('span');
-                span.style.color = color;
-                range.surroundContents(span);
-                sel.removeAllRanges();
-                return;
-            } catch (e) {
-                try {
-                    var textNode = range.startContainer;
-                    var startOffset = range.startOffset;
-                    var endOffset = range.endOffset;
-                    
-                    if (textNode.nodeType === 3) {
-                        var parentNode = textNode.parentNode;
-                        var text = textNode.textContent;
-                        var before = text.substring(0, startOffset);
-                        var middle = text.substring(startOffset, endOffset);
-                        var after = text.substring(endOffset);
-                        
-                        var span = document.createElement('span');
-                        span.style.color = color;
-                        span.textContent = middle;
-                        
-                        var fragment = document.createDocumentFragment();
-                        if (before) fragment.appendChild(document.createTextNode(before));
-                        fragment.appendChild(span);
-                        if (after) fragment.appendChild(document.createTextNode(after));
-                        parentNode.replaceChild(fragment, textNode);
-                        sel.removeAllRanges();
-                        return;
-                    }
-                } catch (e2) {
-                    alert('Could not apply color. Please try selecting a smaller portion of text.');
-                    return;
-                }
-            }
-            return;
-        }
-
-        var endIndex = startIndex + selectedText.length;
-        var before = fullText.substring(0, startIndex);
-        var middle = fullText.substring(startIndex, endIndex);
-        var after = fullText.substring(endIndex);
-
-        var coloredHtml = '<span style="color:' + color + ';">' + middle + '</span>';
-        var newHtml = before + coloredHtml + after;
-
-        $container.html(newHtml);
         sel.removeAllRanges();
+        savedSelection = null;
         
     } catch (e) {
         alert('Error applying color: ' + e.message);

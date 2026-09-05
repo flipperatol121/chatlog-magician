@@ -3,7 +3,6 @@
     return regex.test(input);
 }
 
-// Main render function
 function renderChatlog() {
     $(".generated").remove();
     $(".clear").remove();
@@ -28,187 +27,140 @@ function renderChatlog() {
         return text.replace(/!\{#[A-Fa-f0-9]{6}\}/g, '');
     }
 
-    var allWrappedLines = [];
+    var anyHighlighted = highlightedChars && highlightedChars.length > 0;
+
     for (var t = 0; t < inputLines.length; t++) {
         var lineText = inputLines[t];
         var strippedText = lineText;
 
         if (lineText.trim() === '') {
-            allWrappedLines.push({
-                text: '',
-                originalIndex: t,
-                wrapIndex: 0,
-                isFirst: true,
-                isLast: true,
-                isHighlighted: false,
-                isEmpty: true,
-                originalText: '',
-                hasHex: false
-            });
+            var emptyDiv = $('<div class="generated empty-line" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;min-height:1.3em;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">&nbsp;</div>');
+            $wrapper.append(emptyDiv);
+            if (t < inputLines.length - 1) {
+                $wrapper.append('<br>');
+            }
             continue;
         }
 
         if (useRegex(lineText)) strippedText = lineText.slice(10);
 
-        var wrappedLines = wrapAndSplit(strippedText, wrapWidth);
+        var markerStart = '\u200D';
+        var markerEnd = '\u200C';
+        
+        var parts = strippedText.split('÷');
+        var processedText = '';
+        for (var i = 0; i < parts.length; i++) {
+            if (i % 2 === 1) {
+                processedText += markerStart + parts[i] + markerEnd;
+            } else {
+                processedText += parts[i];
+            }
+        }
+
+        var words = processedText.split(' ');
+        var wrappedLines = [];
+        var currentLine = '';
+        var currentWords = [];
+        
+        for (var w = 0; w < words.length; w++) {
+            var word = words[w];
+            if (!word) continue;
+            
+            if (currentLine.length + word.length + (currentLine ? 1 : 0) <= wrapWidth) {
+                if (currentLine) currentLine += ' ';
+                currentLine += word;
+                currentWords.push(word);
+            } else {
+                if (currentLine) {
+                    wrappedLines.push(currentWords);
+                }
+                currentLine = word;
+                currentWords = [word];
+            }
+        }
+        if (currentLine) {
+            wrappedLines.push(currentWords);
+        }
+
         var isHighlighted = isHighlightedLine(strippedText, highlightedChars);
         var hasHex = hasHexColors(strippedText);
         var textForDetection = hasHex ? stripHexCodes(strippedText) : strippedText;
+        var colorClass = detectColorClass(textForDetection, isHighlighted, anyHighlighted);
 
-        for (var w = 0; w < wrappedLines.length; w++) {
-            allWrappedLines.push({
-                text: wrappedLines[w],
-                originalIndex: t,
-                wrapIndex: w,
-                isFirst: (w === 0),
-                isLast: (w === wrappedLines.length - 1),
-                isHighlighted: isHighlighted,
-                isEmpty: false,
-                originalText: strippedText,
-                textForDetection: textForDetection,
-                hasHex: hasHex
-            });
-        }
-    }
-
-    if (allWrappedLines.length === 0) {
-        allWrappedLines.push({
-            text: '',
-            originalIndex: 0,
-            wrapIndex: 0,
-            isFirst: true,
-            isLast: true,
-            isHighlighted: false,
-            isEmpty: true,
-            originalText: '',
-            textForDetection: '',
-            hasHex: false
-        });
-    }
-
-    var anyHighlighted = highlightedChars && highlightedChars.length > 0;
-
-    var lineColorClass = {};
-    for (var g = 0; g < allWrappedLines.length; g++) {
-        var item = allWrappedLines[g];
-        if (item.isEmpty) {
-            lineColorClass[g] = 'empty';
-            continue;
-        }
-        
-        var detectionText = item.textForDetection || item.originalText || item.text;
-        var trimmedText = detectionText.trim();
-        
-        if (!trimmedText) {
-            lineColorClass[g] = 'empty';
-            continue;
-        }
-        
-        var colorClass = detectColorClass(trimmedText, item.isHighlighted, anyHighlighted);
-        lineColorClass[g] = colorClass;
-    }
-
-    var tempDivs = [];
-    var maxWidth = 0;
-
-    for (var g = 0; g < allWrappedLines.length; g++) {
-        var item = allWrappedLines[g];
-
-        if (item.isEmpty) {
-            var emptyDiv = $('<div class="generated empty-line" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;min-height:1.3em;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">&nbsp;</div>');
-
-            emptyDiv.data('originalIndex', item.originalIndex);
-            emptyDiv.data('wrapIndex', 0);
-            emptyDiv.data('isEmpty', true);
-            $wrapper.append(emptyDiv);
-            tempDivs.push(emptyDiv);
-            if (g < allWrappedLines.length - 1) {
-                if (item.isLast) {
-                    $wrapper.append('<br>');
-                } else {
-                    $wrapper.append(' ');
-                }
-            }
-            continue;
-        }
-
-        var displayText = parseColorCodes(item.text);
-        displayText = applyCensorship(displayText);
-        
-        var colorClass = lineColorClass[g] || 'default';
-        var detectionText = item.textForDetection || item.originalText || item.text;
-        var trimmedDetection = detectionText.trim();
-        
-        if (trimmedDetection) {
-            if (item.hasHex) {
-                var hasCustomColors = /<span style="color:#[A-Fa-f0-9]{6};"/.test(displayText);
-                if (!hasCustomColors) {
-                    var coloredText = applyColorClass(displayText, colorClass);
-                    displayText = coloredText;
-                } else {
-                    var tempDiv = $('<div>' + displayText + '</div>');
-                    var hasClassSpan = tempDiv.find('span[class]').length > 0;
-                    if (!hasClassSpan) {
-                        var classMap = {
-                            'death': 'death',
-                            'me': 'me',
-                            'whisper': 'whisper',
-                            'carwhisper': 'carwhisper',
-                            'ooc': 'ooc',
-                            'grey': 'grey',
-                            'darkgrey': 'darkgrey',
-                            'lightgrey': 'lightgrey',
-                            'white': 'white',
-                            'radio': 'radio',
-                            'radio2': 'radio2',
-                            'dep': 'dep',
-                            'toyou': 'toyou',
-                            'yellow': 'yellow',
-                            'blue': 'blue',
-                            'megafon': 'megafon',
-                            'news': 'news',
-                            'money': 'money',
-                            'green': 'green',
-                            'orange': 'orange',
-                            'vessel': 'vessel'
-                        };
-                        if (classMap[colorClass]) {
-                            displayText = '<span class="' + classMap[colorClass] + '">' + displayText + '</span>';
-                        }
+        for (var wl = 0; wl < wrappedLines.length; wl++) {
+            var lineWords = wrappedLines[wl];
+            var fullLine = lineWords.join(' ');
+            
+            var finalParts = [];
+            var currentText = '';
+            var inCensor = false;
+            var markerBuffer = '';
+            
+            for (var i = 0; i < fullLine.length; i++) {
+                var ch = fullLine[i];
+                if (ch === markerStart) {
+                    if (currentText) {
+                        finalParts.push({ text: currentText, censored: inCensor });
+                        currentText = '';
                     }
+                    inCensor = true;
+                } else if (ch === markerEnd) {
+                    if (currentText) {
+                        finalParts.push({ text: currentText, censored: true });
+                        currentText = '';
+                    }
+                    inCensor = false;
+                } else {
+                    currentText += ch;
                 }
-            } else {
-                var coloredText = applyColorClass(displayText, colorClass);
-                displayText = coloredText;
             }
-        }
-
-        var div = $('<div class="generated" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">' + displayText.trim() + '</div>');
-        div.data('originalIndex', item.originalIndex);
-        div.data('wrapIndex', item.wrapIndex);
-        div.data('isFirst', item.isFirst);
-        div.data('isLast', item.isLast);
-        div.data('isHighlighted', item.isHighlighted);
-        div.data('rawText', item.text);
-        div.data('isEmpty', false);
-        div.data('hasHex', item.hasHex);
-        $wrapper.append(div);
-        tempDivs.push(div);
-        if (g < allWrappedLines.length - 1) {
-            if (item.isLast) {
-                $wrapper.append('<br>');
-            } else {
+            if (currentText) {
+                finalParts.push({ text: currentText, censored: inCensor });
+            }
+            
+            var lineDisplay = '';
+            var inCensorSpan = false;
+            for (var p = 0; p < finalParts.length; p++) {
+                var part = finalParts[p];
+                if (part.censored) {
+                    if (!inCensorSpan) {
+                        lineDisplay += '<span class="censor-removed">';
+                        inCensorSpan = true;
+                    }
+                    lineDisplay += part.text;
+                } else {
+                    if (inCensorSpan) {
+                        lineDisplay += '</span>';
+                        inCensorSpan = false;
+                    }
+                    lineDisplay += part.text;
+                }
+            }
+            if (inCensorSpan) {
+                lineDisplay += '</span>';
+            }
+            
+            lineDisplay = parseColorCodes(lineDisplay);
+            lineDisplay = lineDisplay.replace(/!\{#[A-Fa-f0-9]{6}\}/g, '');
+            
+            if (colorClass !== 'default' && colorClass !== 'empty') {
+                lineDisplay = applyColorClass(lineDisplay, colorClass);
+            }
+            
+            var div = $('<div class="generated" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">' + lineDisplay.trim() + '</div>');
+            $wrapper.append(div);
+            
+            if (wl < wrappedLines.length - 1) {
                 $wrapper.append('');
             }
         }
+        
+        if (t < inputLines.length - 1) {
+            $wrapper.append('<br>');
+        }
     }
 
-    $(".generated").each(function() {
-        var html = $(this).html();
-        html = html.replace(/!\{#[A-Fa-f0-9]{6}\}/g, '');
-        $(this).html(html);
-    });
-
+    var maxWidth = 0;
     $(".generated").each(function() {
         var width = $(this).outerWidth(true);
         if (width > maxWidth) {

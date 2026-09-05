@@ -10,21 +10,6 @@ function updateCensorButtonText() {
     $('#censor-toggle-btn').text('Censor: Remove');
 }
 
-function applyCensorship(text) {
-    var parts = text.split('÷');
-    var result = '';
-
-    for (var i = 0; i < parts.length; i++) {
-        if (i % 2 === 1) {
-            result += '<span class="censor-removed">' + parts[i] + '</span>';
-        } else {
-            result += parts[i];
-        }
-    }
-
-    return result;
-}
-
 function initCensorSystem() {
     $('#censor-insert-btn').click(function() {
         var symbol = '÷';
