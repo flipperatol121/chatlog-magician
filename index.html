@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="asapdev" />
+    <meta name="description" content="Chatlog Magician for GTA World" />
+    <title>Chatlog Magician</title>
+    <meta name="keywords" content="GTAW, GTA World, FiveM, chatlog magician, chatlog, magician" />
+
+    <link rel="stylesheet" href="css/boostrap.css" crossorigin="anonymous" />
+    <link href="css/sp-style.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+    <!-- <link rel="icon" href="favicon.png" /> -->
+</head>
+<body>
+    <br />
+
+    <div class="container">
+        <div class="row name">
+            <div class="col-xs-12">
+                <input type="hidden" class="form-control" id="name" />
+            </div>
+        </div>
+        <br />
+
+        <div class="clog_settings">
+            <div class="row" id="bal">
+                <div class="col-xs-12 fill-container">
+                    <label for="font-label">font size</label>
+                    <input name="font-label" id="font-label" type="number" min="10" max="64" value="12" />
+
+                    <label for="line-break" style="margin-left: 15px;">wrap width</label>
+                    <input name="line-break" id="line-break" type="number" min="20" max="200" value="70" style="width: 50px;" />
+
+                    <label for="highlight-name" style="margin-left: 15px;">highlight</label>
+                    <input name="highlight-name" id="highlight-name" type="text" placeholder="Character Name" style="width: 180px;" />
+                    <button id="highlight-add" class="btn btn-sm btn-primary" style="margin-left: 5px; padding: 4px 12px; border-radius: 4px;">Add</button>
+                    <button id="highlight-list" class="btn btn-sm btn-secondary" style="margin-left: 5px; padding: 4px 12px; border-radius: 4px;">▼</button>
+                </div>
+            </div>
+        </div>
+
+        <br />
+
+        <center>
+            <div class="textarea-container">
+                <textarea class="form-control textarea-input" rows="15" placeholder=""></textarea>
+            </div>
+            <br />
+
+            <div style="margin-top: 0px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button id="color-picker-btn" class="btn btn-secondary" style="padding: 8px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #cdd6f4; cursor: pointer; font-size: 14px;">Color</button>
+
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <label for="bg-color-picker" style="margin: 0; font-size: 12px; color: #888; text-transform: none;">BG:</label>
+                        <input type="color" id="bg-color-picker" value="#000000" style="width: 30px; height: 30px; border: none; border-radius: 4px; cursor: pointer; background: transparent; padding: 0;" />
+                        <button id="bg-toggle-btn" class="btn btn-secondary" style="padding: 8px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #cdd6f4; cursor: pointer; font-size: 14px;">Show BG</button>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; align-items: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;">
+                        <button id="censor-insert-btn" class="btn btn-secondary" style="padding: 8px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #cdd6f4; cursor: pointer; font-size: 14px; font-weight: 700;" title="Copy ÷ symbol">÷</button>
+                        <button id="censor-toggle-btn" class="btn btn-secondary" style="padding: 8px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #cdd6f4; cursor: pointer; font-size: 14px;">Remove</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button id="copyOutput" class="btn btn-secondary" style="padding: 8px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.08); color: #cdd6f4; cursor: pointer; font-weight: 700; font-size: 14px;">Copy</button>
+                    <button id="downloadOutputTransparent" class="btn btn-success" style="padding: 8px 16px; border-radius: 4px; border: none; background: #28a745; color: #fff; cursor: pointer; font-weight: 700; font-size: 14px;">Download</button>
+                </div>
+            </div>
+        </center>
+
+        <br />
+        <div style="display: inline-block; max-width: 100%;">
+            <div class="output" id="output"></div>
+        </div>
+    </div>
+
+    <br />
+    <br />
+
+    <script src="js/app.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="js/parse-text.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/color-picker.js"></script>
+    <script src="js/download-img.js"></script>
+    <script src="js/download.js"></script>
+
+    <script src="js/modules/highlight-handler.js"></script>
+    <script src="js/modules/censor-handler.js"></script>
+    <script src="js/modules/color-handler.js"></script>
+    <script src="js/modules/background-handler.js"></script>
+    <script src="js/modules/text-processor.js"></script>
+
+    <script src="js/chatlog-parser.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            function getCaptureElement() {
+                return document.querySelector(".generated-wrapper") || document.getElementById("output");
+            }
+
+            function getBackgroundColor() {
+                var showBg = localStorage.getItem('chatlog-show-bg') !== 'false';
+                if (!showBg) return null;
+                return localStorage.getItem('chatlog-bg-color') || '#000000';
+            }
+
+            $("#downloadOutput").click(function() {
+                var element = getCaptureElement();
+                var bgColor = getBackgroundColor();
+                
+                domtoimage.toBlob(element, {
+                    bgcolor: bgColor,
+                    style: {
+                        'background-color': bgColor || 'transparent'
+                    }
+                })
+                .then(function(blob) {
+                    window.saveAs(
+                        blob,
+                        new Date()
+                        .toLocaleString()
+                        .replaceAll(",", "_")
+                        .replaceAll(" ", "_")
+                        .replaceAll("/", "-")
+                        .replace("__", "_")
+                        .replaceAll(":", "-") +
+                        "_" +
+                        "chatlog.png"
+                    );
+                })
+                .catch(function(err) {
+                    console.error('Download failed:', err);
+                });
+            });
+
+            $("#downloadOutputTransparent").click(function() {
+                var element = getCaptureElement();
+                domtoimage
+                    .toBlob(element)
+                    .then(function(blob) {
+                        window.saveAs(
+                            blob,
+                            new Date()
+                            .toLocaleString()
+                            .replaceAll(",", "_")
+                            .replaceAll(" ", "_")
+                            .replaceAll("/", "-")
+                            .replace("__", "_")
+                            .replaceAll(":", "-") +
+                            "_" +
+                            "chatlog.png"
+                        );
+                    });
+            });
+
+            $("#copyOutput").click(function() {
+                var $btn = $("#copyOutput");
+                var originalText = $btn.text();
+                var element = getCaptureElement();
+
+                domtoimage.toPng(element, {
+                    bgcolor: null,
+                    style: {
+                        'background-color': 'transparent'
+                    }
+                })
+                .then(function(dataUrl) {
+                    return new Promise(function(resolve, reject) {
+                        var img = new Image();
+                        img.onload = function() {
+                            var canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            var ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+
+                            var croppedCanvas = cropCanvas(canvas);
+                            
+                            croppedCanvas.toBlob(function(blob) {
+                                resolve(blob);
+                            }, 'image/png');
+                        };
+                        img.onerror = function() {
+                            reject(new Error('Failed to load image'));
+                        };
+                        img.src = dataUrl;
+                    });
+                })
+                .then(function(blob) {
+                    return navigator.clipboard.write([
+                        new ClipboardItem({
+                            [blob.type]: blob
+                        })
+                    ]);
+                })
+                .then(function() {
+                    $btn.text("Copied!").css("color", "#56d64b");
+                    setTimeout(function() {
+                        $btn.text(originalText).css("color", "");
+                    }, 2000);
+                })
+                .catch(function(err) {
+                    console.error('Copy failed:', err);
+                    $btn.text("Failed").css("color", "#f00000");
+                    setTimeout(function() {
+                        $btn.text(originalText).css("color", "");
+                    }, 2000);
+                });
+            });
+
+            function cropCanvas(canvas) {
+                var ctx = canvas.getContext('2d');
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var data = imageData.data;
+                var w = canvas.width;
+                var h = canvas.height;
+
+                var top = h, bottom = 0, left = w, right = 0;
+                var found = false;
+
+                for (var y = 0; y < h; y++) {
+                    for (var x = 0; x < w; x++) {
+                        var idx = (y * w + x) * 4;
+                        var a = data[idx + 3];
+                        if (a > 10) {
+                            if (y < top) top = y;
+                            if (y > bottom) bottom = y;
+                            if (x < left) left = x;
+                            if (x > right) right = x;
+                            found = true;
+                        }
+                    }
+                }
+
+                if (!found) {
+                    return canvas;
+                }
+
+                var cropX = left;
+                var cropY = top;
+                var cropW = right - left + 1;
+                var cropH = bottom - top + 1;
+
+                var cropped = document.createElement('canvas');
+                cropped.width = cropW;
+                cropped.height = cropH;
+                var croppedCtx = cropped.getContext('2d');
+                croppedCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+                return cropped;
+            }
+        });
+    </script>
+</body>
+</html>
