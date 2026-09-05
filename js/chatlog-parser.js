@@ -86,6 +86,8 @@ function renderChatlog() {
         });
     }
 
+    var anyHighlighted = highlightedChars && highlightedChars.length > 0;
+
     var lineColorClass = {};
     for (var g = 0; g < allWrappedLines.length; g++) {
         var item = allWrappedLines[g];
@@ -102,7 +104,7 @@ function renderChatlog() {
             continue;
         }
         
-        var colorClass = detectColorClass(trimmedText, item.isHighlighted);
+        var colorClass = detectColorClass(trimmedText, item.isHighlighted, anyHighlighted);
         lineColorClass[g] = colorClass;
     }
 
@@ -229,7 +231,7 @@ function renderChatlog() {
     $wrapper.css('padding-top', '0px');
 }
 
-function detectColorClass(text, isHighlighted) {
+function detectColorClass(text, isHighlighted, anyHighlighted) {
     var trimmedText = text.trim();
     var isInfo = /\[INFO\]/.test(trimmedText);
     var isError = /\[ERROR\]/.test(trimmedText);
@@ -414,11 +416,28 @@ function detectColorClass(text, isHighlighted) {
     }
 
     var isHealthFull = /Your health is already full/.test(trimmedText);
-    var isToYou = /^\[!\]/.test(trimmedText);
 
     if (isHighlighted && !isInfo && !isError && !isAdminBan && !isAFKCheck && !isFactionMembers && !isOnlineFactionMembers && !isFactionMemberList && !isFactionCount) {
-        return 'highlighted';
-    } else if (isPayment) {
+        if (isLow) {
+            return 'highlightedLow';
+        } else if (isLower) {
+            return 'highlightedLower';
+        } else {
+            return 'highlighted';
+        }
+    } else {
+        if (anyHighlighted) {
+            if (isLow) {
+                return 'unhighlightedLow';
+            } else if (isLower) {
+                return 'unhighlightedLower';
+            } else if (isSays) {
+                return 'unhighlightedSays';
+            }
+        }
+    }
+
+    if (isPayment) {
         return 'payment';
     } else if (isInfoColon) return 'infoColon';
     else if (isInfo) return 'info';
@@ -506,7 +525,6 @@ function detectColorClass(text, isHighlighted) {
     else if (isEmote && !isOOC && !isFactionOOC && !isAttempt && !isRadio) return 'emote';
     else if (isAttempt) return 'attempt';
     else if (isDoorNoise) return 'doorNoise';
-    else if (isToYou) return 'toYou';
     else if (isWhisper && !isCarWhisper) return 'whisper';
     else if (isCarWhisper) return 'carWhisper';
     else if (isSays && !isWhisper && !isLow && !isLower && !isCellphone) return 'says';
@@ -613,7 +631,6 @@ function applyColorClass(text, colorClass) {
     var isBusinessOpened = /business is now opened/.test(text);
     var isCharacterChanged = /changed their character/.test(text);
     var isPleaseWait = /Please wait while/.test(text);
-    var isToYou = /^\[!\]/.test(text);
     var isMenuLink = /Menu link:/.test(text);
     var isViewMenu = /\/viewmenu/.test(text);
     var isID = /The ID of/.test(text);
@@ -659,7 +676,47 @@ function applyColorClass(text, colorClass) {
 
     switch (colorClass) {
         case 'highlighted':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
             return '<span class="white">' + temp + '</span>';
+
+        case 'highlightedLow':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="lightgrey">' + temp + '</span>';
+
+        case 'highlightedLower':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="grey">' + temp + '</span>';
+
+        case 'unhighlightedSays':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="lightgrey">' + temp + '</span>';
+
+        case 'unhighlightedShout':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="lightgrey">' + temp + '</span>';
+
+        case 'unhighlightedLow':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="grey">' + temp + '</span>';
+
+        case 'unhighlightedLower':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="grey">' + temp + '</span>';
+
         case 'payment':
             return '<span class="money">' + temp + '</span>';
         case 'infoColon':
@@ -797,9 +854,6 @@ function applyColorClass(text, colorClass) {
         case 'pleaseWait':
         case 'id':
         case 'unequipped':
-        case 'says':
-        case 'shout':
-        case 'phoneHangup':
         case 'default':
             return '<span class="white">' + temp + '</span>';
         case 'cursor':
@@ -958,12 +1012,32 @@ function applyColorClass(text, colorClass) {
             return '<span class="me">' + temp + '</span>';
         case 'whisper':
             return '<span class="whisper">' + temp + '</span>';
-        case 'carWhisper':
+        case 'carwhisper':
             return '<span class="carwhisper">' + temp + '</span>';
+        case 'says':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="white">' + temp + '</span>';
+        case 'shout':
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="white">' + temp + '</span>';
+        case 'cellphone':
+        case 'phoneSays':
+        case 'phonePickup':
+            return '<span class="yellow">' + temp + '</span>';
         case 'low':
-            return '<span class="grey">' + temp + '</span>';
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="lightgrey">' + temp + '</span>';
         case 'lower':
-            return '<span class="darkgrey">' + temp + '</span>';
+            if (/\[!\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+            }
+            return '<span class="grey">' + temp + '</span>';
         case 'phones':
             temp = temp.replace(/Phones:/g, '<span class="blue">Phones:</span>');
             return '<span class="white">' + temp + '</span>';
@@ -1018,10 +1092,6 @@ function applyColorClass(text, colorClass) {
             temp = temp.replace(/to decline\./g, '<span class="white">to decline.</span>');
             
             return temp;
-        case 'cellphone':
-        case 'phoneSays':
-        case 'phonePickup':
-            return '<span class="yellow">' + temp + '</span>';
         case 'contactEntry':
             temp = temp.replace(/ - Online/g, '<span class="green"> - Online</span>');
             temp = temp.replace(/ - Offline/g, '<span class="death"> - Offline</span>');
@@ -1046,20 +1116,6 @@ function applyColorClass(text, colorClass) {
         case 'atLocation':
             temp = temp.replace(/\$0\/\d+/g, '<span class="money">$&</span>');
             return '<span class="white">' + temp + '</span>';
-        case 'toYou':
-            if (/\[low\]/.test(temp)) {
-                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
-                return '<span class="grey">' + temp + '</span>';
-            } else if (/\[lower\]/.test(temp)) {
-                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
-                return '<span class="darkgrey">' + temp + '</span>';
-            } else if (/shouts:/i.test(temp)) {
-                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
-                return '<span class="white">' + temp + '</span>';
-            } else {
-                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
-                return '<span class="white">' + temp + '</span>';
-            }
         case 'menuLink':
             temp = temp.replace(/Menu link:/g, '<span class="yellow">Menu link:</span>');
             temp = temp.replace(/(https?:\/\/[^\s]+)/g, '<span class="blue">$1</span>');
