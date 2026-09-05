@@ -13,7 +13,7 @@ function renderChatlog() {
     var showBg = localStorage.getItem('chatlog-show-bg') !== 'false';
     var bgStyle = showBg ? bgColor : 'transparent';
 
-    var $wrapper = $('<div class="generated-wrapper" style="display:inline-block;padding:0px;line-height:1.2;max-width:none;"></div>');
+    var $wrapper = $('<div class="generated-wrapper" style="display:inline-block;padding:0px;line-height:0;max-width:none;overflow:visible;"></div>');
     $(".output").append($wrapper);
 
     var inputLines = $("textarea").val().replace("<script>", "").replace("</script>", "").split("\n");
@@ -113,14 +113,19 @@ function renderChatlog() {
         var item = allWrappedLines[g];
 
         if (item.isEmpty) {
-            var emptyDiv = $('<div class="generated empty-line" style="display:inline-block;line-height:1.2;padding:0px 4px 0px 4px;margin:0px;min-height:1.2em;background-color:' + bgStyle + ';">&nbsp;</div>');
+            var emptyDiv = $('<div class="generated empty-line" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;min-height:1.3em;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">&nbsp;</div>');
+
             emptyDiv.data('originalIndex', item.originalIndex);
             emptyDiv.data('wrapIndex', 0);
             emptyDiv.data('isEmpty', true);
             $wrapper.append(emptyDiv);
             tempDivs.push(emptyDiv);
             if (g < allWrappedLines.length - 1) {
-                $wrapper.append('<br>');
+                if (item.isLast) {
+                    $wrapper.append('<br>');
+                } else {
+                    $wrapper.append(' ');
+                }
             }
             continue;
         }
@@ -176,7 +181,7 @@ function renderChatlog() {
             }
         }
 
-        var div = $('<div class="generated" style="display:inline-block;line-height:1.2;padding:0px 4px 0px 4px;margin:0px;background-color:' + bgStyle + ';">' + displayText + '</div>');
+        var div = $('<div class="generated" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">' + displayText.trim() + '</div>');
         div.data('originalIndex', item.originalIndex);
         div.data('wrapIndex', item.wrapIndex);
         div.data('isFirst', item.isFirst);
@@ -188,7 +193,11 @@ function renderChatlog() {
         $wrapper.append(div);
         tempDivs.push(div);
         if (g < allWrappedLines.length - 1) {
-            $wrapper.append('<br>');
+            if (item.isLast) {
+                $wrapper.append('<br>');
+            } else {
+                $wrapper.append('');
+            }
         }
     }
 
@@ -497,6 +506,7 @@ function detectColorClass(text, isHighlighted) {
     else if (isEmote && !isOOC && !isFactionOOC && !isAttempt && !isRadio) return 'emote';
     else if (isAttempt) return 'attempt';
     else if (isDoorNoise) return 'doorNoise';
+    else if (isToYou) return 'toYou';
     else if (isWhisper && !isCarWhisper) return 'whisper';
     else if (isCarWhisper) return 'carWhisper';
     else if (isSays && !isWhisper && !isLow && !isLower && !isCellphone) return 'says';
@@ -527,7 +537,6 @@ function detectColorClass(text, isHighlighted) {
     else if (isAtLocation && !isInfo) return 'atLocation';
     else if (isCharacterChanged) return 'characterChanged';
     else if (isPleaseWait) return 'pleaseWait';
-    else if (isToYou) return 'toYou';
     else if (isMenuLink) return 'menuLink';
     else if (isViewMenu) return 'viewMenu';
     else if (isID) return 'id';
@@ -1038,8 +1047,19 @@ function applyColorClass(text, colorClass) {
             temp = temp.replace(/\$0\/\d+/g, '<span class="money">$&</span>');
             return '<span class="white">' + temp + '</span>';
         case 'toYou':
-            temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
-            return temp;
+            if (/\[low\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+                return '<span class="grey">' + temp + '</span>';
+            } else if (/\[lower\]/.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+                return '<span class="darkgrey">' + temp + '</span>';
+            } else if (/shouts:/i.test(temp)) {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+                return '<span class="white">' + temp + '</span>';
+            } else {
+                temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
+                return '<span class="white">' + temp + '</span>';
+            }
         case 'menuLink':
             temp = temp.replace(/Menu link:/g, '<span class="yellow">Menu link:</span>');
             temp = temp.replace(/(https?:\/\/[^\s]+)/g, '<span class="blue">$1</span>');

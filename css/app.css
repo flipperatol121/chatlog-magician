@@ -43,51 +43,49 @@ textarea {
 }
 
 /* OUTPUT CONTAINER */
-.output {
-    -webkit-font-smoothing: none !important;
+#output {
+    line-height: 0;
     font-weight: 700;
-    color: #f1f1f1;
+    color: #fff;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     letter-spacing: 0;
     font-size: 12px;
+}
+
+.output {
+    line-height: 1.45;
+    font-family: Arial, sans-serif !important;
+    text-rendering: optimizeSpeed;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 0 #000, 0 -1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    letter-spacing: 0.2px;
+    font-size: 12px;
     overflow: visible !important;
-    min-height: 100%;
+}
+
+.generated {
+    white-space: pre-line;
+    word-wrap: break-word;
+    line-height: 1.3;
+    color: #fff;
+    display: inline-block;
+    padding: 0px 5px 1px 5px;
+    background-color: transparent;
 }
 
 .generated-wrapper {
     display: inline-block;
     padding: 0px;
-    line-height: 1.2;
+    line-height: 0;
     max-width: none;
-    overflow: visible !important;
-    min-height: 100% !important;
-}
-
-.generated {
-    display: inline-block;
-    padding: 0px 4px 0px 4px;
-    max-width: 100%;
-    word-wrap: break-word;
-    line-height: 1.2;
-    width: auto;
-    min-height: 1.2em;
     overflow: visible !important;
 }
 
 .generated.empty-line {
     display: inline-block;
-    min-height: 1.2em;
-    padding: 0px 4px 2px 4px;
-    overflow: visible;
-}
-
-.generated:last-child {
-    padding-bottom: 4px !important;
-}
-
-.generated .selected {
-    outline: 2px solid rgba(255, 255, 255, 0.3);
-    outline-offset: 2px;
+    min-height: 1.3em;
+    padding: 0px 5px 1px 5px;
 }
 
 /* CHAT TYPE COLORS */

@@ -128,10 +128,12 @@ function buildLineFromWordData(wordDataArray, tokens) {
             result += word;
         }
 
-        if (i < wordDataArray.length - 1) result += ' ';
+        if (i < wordDataArray.length - 1) {
+            result += ' ';
+        }
     }
 
-    return result;
+    return result.trim();
 }
 
 function wrapAndSplit(text, width) {
@@ -170,11 +172,11 @@ function wrapAndSplit(text, width) {
             if (currentLine.length + word.length + 1 <= width) {
                 currentLine += (currentLine ? ' ' : '') + word;
             } else {
-                if (currentLine) lines.push(currentLine);
+                if (currentLine) lines.push(currentLine.trim());
                 if (word.length > width) {
                     var remaining = word;
                     while (remaining.length > width) {
-                        lines.push(remaining.substring(0, width));
+                        lines.push(remaining.substring(0, width).trim());
                         remaining = remaining.substring(width);
                     }
                     currentLine = remaining;
@@ -183,7 +185,7 @@ function wrapAndSplit(text, width) {
                 }
             }
         }
-        if (currentLine) lines.push(currentLine);
+        if (currentLine) lines.push(currentLine.trim());
         return lines;
     }
 
@@ -219,7 +221,10 @@ function wrapAndSplit(text, width) {
             currentLineLength += word.length + (currentLineWords.length > 1 ? 1 : 0);
         } else {
             if (currentLineWords.length > 0) {
-                lines.push(buildLineFromWordData(currentLineWords, tokens));
+                var lineText = buildLineFromWordData(currentLineWords, tokens);
+                // Remove trailing spaces
+                lineText = lineText.replace(/\s+$/, '');
+                lines.push(lineText);
             }
             currentLineWords = [wordData];
             currentLineLength = word.length;
@@ -227,7 +232,10 @@ function wrapAndSplit(text, width) {
     }
 
     if (currentLineWords.length > 0) {
-        lines.push(buildLineFromWordData(currentLineWords, tokens));
+        var lineText = buildLineFromWordData(currentLineWords, tokens);
+        // Remove trailing spaces
+        lineText = lineText.replace(/\s+$/, '');
+        lines.push(lineText);
     }
 
     return lines;
