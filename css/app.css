@@ -30,7 +30,6 @@ html::-webkit-scrollbar {
     box-shadow: none;
 }
 
-/* Override any browser default focus styles for textarea */
 textarea:focus {
     background: rgba(255, 255, 255, .05) !important;
     color: #cdd6f4 !important;
@@ -51,6 +50,8 @@ textarea {
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     letter-spacing: 0;
     font-size: 12px;
+    overflow: visible !important;
+    min-height: 100%;
 }
 
 .generated-wrapper {
@@ -58,6 +59,8 @@ textarea {
     padding: 0px;
     line-height: 1.2;
     max-width: none;
+    overflow: visible !important;
+    min-height: 100% !important;
 }
 
 .generated {
@@ -68,12 +71,18 @@ textarea {
     line-height: 1.2;
     width: auto;
     min-height: 1.2em;
+    overflow: visible !important;
 }
 
 .generated.empty-line {
     display: inline-block;
     min-height: 1.2em;
-    padding: 0px 4px 0px 4px;
+    padding: 0px 4px 2px 4px;
+    overflow: visible;
+}
+
+.generated:last-child {
+    padding-bottom: 4px !important;
 }
 
 .generated .selected {
