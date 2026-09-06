@@ -57,44 +57,19 @@ function renderChatlog() {
             }
         }
 
-        var words = processedText.split(' ');
-        var wrappedLines = [];
-        var currentLine = '';
-        var currentWords = [];
-        
-        for (var w = 0; w < words.length; w++) {
-            var word = words[w];
-            if (!word) continue;
-            
-            if (currentLine.length + word.length + (currentLine ? 1 : 0) <= wrapWidth) {
-                if (currentLine) currentLine += ' ';
-                currentLine += word;
-                currentWords.push(word);
-            } else {
-                if (currentLine) {
-                    wrappedLines.push(currentWords);
-                }
-                currentLine = word;
-                currentWords = [word];
-            }
-        }
-        if (currentLine) {
-            wrappedLines.push(currentWords);
-        }
-
         var isHighlighted = isHighlightedLine(strippedText, highlightedChars);
         var hasHex = hasHexColors(strippedText);
         var textForDetection = hasHex ? stripHexCodes(strippedText) : strippedText;
         var colorClass = detectColorClass(textForDetection, isHighlighted, anyHighlighted);
 
+        var wrappedLines = wrapAndSplit(processedText, wrapWidth);
+        
         for (var wl = 0; wl < wrappedLines.length; wl++) {
-            var lineWords = wrappedLines[wl];
-            var fullLine = lineWords.join(' ');
+            var fullLine = wrappedLines[wl];
             
             var finalParts = [];
             var currentText = '';
             var inCensor = false;
-            var markerBuffer = '';
             
             for (var i = 0; i < fullLine.length; i++) {
                 var ch = fullLine[i];
@@ -144,7 +119,9 @@ function renderChatlog() {
             lineDisplay = lineDisplay.replace(/!\{#[A-Fa-f0-9]{6}\}/g, '');
             
             if (colorClass !== 'default' && colorClass !== 'empty') {
-                lineDisplay = applyColorClass(lineDisplay, colorClass);
+                if (!/<span style="color:#[A-Fa-f0-9]{6};">/.test(lineDisplay)) {
+                    lineDisplay = applyColorClass(lineDisplay, colorClass);
+                }
             }
             
             var div = $('<div class="generated" style="display:inline-block;line-height:1.3;padding:0px 5px 1px 5px;background-color:' + bgStyle + ';overflow:visible;white-space:pre-line;">' + lineDisplay.trim() + '</div>');

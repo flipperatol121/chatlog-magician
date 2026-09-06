@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="css/boostrap.css" crossorigin="anonymous" />
     <link href="css/sp-style.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
-    <!-- <link rel="icon" href="favicon.png" /> -->
 </head>
 <body>
     <br />
@@ -82,6 +81,7 @@
     <br />
     <br />
 
+    <!-- Load scripts -->
     <script src="js/app.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="js/parse-text.js"></script>
     <script src="js/chat.js"></script>
@@ -98,106 +98,394 @@
     <script src="js/chatlog-parser.js"></script>
 
     <script>
-        $(document).ready(function() {
-            function getCaptureElement() {
-                return document.querySelector(".generated-wrapper") || document.getElementById("output");
+    $(document).ready(function() {
+        function getColorFromClass(className) {
+            var colorMap = {
+                'me': '#c2a3da',
+                'whisper': '#eda841',
+                'carwhisper': '#eda841',
+                'ooc': '#b8bec7',
+                'grey': '#939799',
+                'darkgrey': '#5a5a5b',
+                'lightgrey': '#c6c4c4',
+                'white': '#f1f1f1',
+                'radio': '#ffec8b',
+                'radio2': '#a19558',
+                'dep': '#ccca15',
+                'toyou': '#ff00bc',
+                'yellow': '#fbf724',
+                'blue': '#3896f3',
+                'megafon': '#e7e700',
+                'news': '#10f441',
+                'death': '#f00000',
+                'money': '#56d64b',
+                'green': '#56d64b',
+                'orange': '#eda841',
+                'vessel': '#33c1c9'
+            };
+            
+            if (colorMap[className]) {
+                return colorMap[className];
             }
+            
+            try {
+                var temp = document.createElement('span');
+                temp.className = className;
+                document.body.appendChild(temp);
+                var computedColor = getComputedStyle(temp).color;
+                document.body.removeChild(temp);
+                if (computedColor && computedColor !== 'rgb(255, 255, 255)') {
+                    return computedColor;
+                }
+            } catch(e) {}
+            
+            return null;
+        }
 
-            function getBackgroundColor() {
-                var showBg = localStorage.getItem('chatlog-show-bg') !== 'false';
-                if (!showBg) return null;
-                return localStorage.getItem('chatlog-bg-color') || '#000000';
+        function getHighlightColorFromElement(element) {
+            var classNames = element.className.split(' ');
+            for (var j = 0; j < classNames.length; j++) {
+                var cls = classNames[j];
+                if (cls === 'highlighted') {
+                    return '#f1f1f1'; // White
+                } else if (cls === 'highlightedLow') {
+                    return '#c6c4c4'; // Light grey
+                } else if (cls === 'highlightedLower') {
+                    return '#939799'; // Grey
+                } else if (cls === 'unhighlightedSays' || cls === 'unhighlightedShout') {
+                    return '#c6c4c4'; // Light grey
+                } else if (cls === 'unhighlightedLow' || cls === 'unhighlightedLower') {
+                    return '#939799'; // Grey
+                }
             }
+            return null;
+        }
 
-            $("#downloadOutput").click(function() {
-                var element = getCaptureElement();
-                var bgColor = getBackgroundColor();
+        function getColorFromElement(element) {
+            var highlightColor = getHighlightColorFromElement(element);
+            if (highlightColor) {
+                return highlightColor;
+            }
+            
+            var color = '#f1f1f1';
+            var classNames = element.className.split(' ');
+            for (var j = 0; j < classNames.length; j++) {
+                var cls = classNames[j];
+                var clsColor = getColorFromClass(cls);
+                if (clsColor) {
+                    color = clsColor;
+                    break;
+                }
+            }
+            
+            if (element.style && element.style.color) {
+                color = element.style.color;
+            }
+            
+            return color;
+        }
+
+        function parseNodeToFragments(node, currentColor, parentElement) {
+            var fragments = [];
+            
+            if (node.nodeType === 3) { // Text node
+                var text = node.textContent;
+                if (text && text.trim()) {
+                    fragments.push({
+                        text: text,
+                        color: currentColor || '#f1f1f1'
+                    });
+                }
+                return fragments;
+            }
+            
+            if (node.nodeType === 1) {
+                var color = getColorFromElement(node);
+                var nodeColor = color || currentColor || '#f1f1f1';
                 
-                domtoimage.toBlob(element, {
-                    bgcolor: bgColor,
-                    style: {
-                        'background-color': bgColor || 'transparent'
+                var childNodes = node.childNodes;
+                for (var i = 0; i < childNodes.length; i++) {
+                    var child = childNodes[i];
+                    var childFragments = parseNodeToFragments(child, nodeColor, node);
+                    fragments = fragments.concat(childFragments);
+                }
+                
+                return fragments;
+            }
+            
+            return fragments;
+        }
+
+        function getLinesFromOutput() {
+            var output = document.getElementById('output');
+            var wrapper = output.querySelector('.generated-wrapper');
+            if (!wrapper) return [];
+            
+            var lines = [];
+            var children = wrapper.children;
+            
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                
+                if (child.tagName === 'DIV' && child.classList.contains('generated')) {
+                    if (child.classList.contains('censor-removed')) {
+                        continue;
                     }
-                })
-                .then(function(blob) {
-                    window.saveAs(
-                        blob,
-                        new Date()
-                        .toLocaleString()
-                        .replaceAll(",", "_")
-                        .replaceAll(" ", "_")
-                        .replaceAll("/", "-")
-                        .replace("__", "_")
-                        .replaceAll(":", "-") +
-                        "_" +
-                        "chatlog.png"
-                    );
-                })
-                .catch(function(err) {
-                    console.error('Download failed:', err);
+                    
+                    var lineHighlightColor = getHighlightColorFromElement(child);
+                    
+                    var fragments = parseNodeToFragments(child, lineHighlightColor || '#f1f1f1', child);
+                    
+                    var filteredFragments = [];
+                    var fullText = '';
+                    for (var f = 0; f < fragments.length; f++) {
+                        var frag = fragments[f];
+                        if (frag.text && frag.text.trim()) {
+                            if (lineHighlightColor) {
+                                frag.color = lineHighlightColor;
+                            }
+                            filteredFragments.push(frag);
+                            fullText += frag.text;
+                        }
+                    }
+                    
+                    if (fullText.trim() !== '') {
+                        lines.push({
+                            text: fullText,
+                            segments: filteredFragments,
+                            isEmpty: false,
+                            element: child,
+                            highlightColor: lineHighlightColor
+                        });
+                    }
+                } else if (child.tagName === 'BR') {
+                    lines.push({ text: '', segments: [], isEmpty: true, element: null });
+                }
+            }
+            
+            return lines;
+        }
+
+        function cropCanvasToContent(canvas) {
+            var ctx = canvas.getContext('2d');
+            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imageData.data;
+            var w = canvas.width;
+            var h = canvas.height;
+
+            var top = h, bottom = 0, left = w, right = 0;
+            var found = false;
+
+            for (var y = 0; y < h; y++) {
+                for (var x = 0; x < w; x++) {
+                    var idx = (y * w + x) * 4;
+                    var a = data[idx + 3];
+                    if (a > 10) {
+                        if (y < top) top = y;
+                        if (y > bottom) bottom = y;
+                        if (x < left) left = x;
+                        if (x > right) right = x;
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found) {
+                return canvas;
+            }
+
+            var padding = 1;
+            var cropX = Math.max(0, left - padding);
+            var cropY = Math.max(0, top - padding);
+            var cropW = Math.min(w - cropX, right - left + 1 + (padding * 2));
+            var cropH = Math.min(h - cropY, bottom - top + 1 + (padding * 2));
+
+            var cropped = document.createElement('canvas');
+            cropped.width = cropW;
+            cropped.height = cropH;
+            var croppedCtx = cropped.getContext('2d');
+            croppedCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+            return cropped;
+        }
+
+        function renderToCanvas(lines, fontSize, bgColor) {
+            var paddingLeft = 5;
+            var paddingRight = 5;
+            var paddingTop = 0;
+            var paddingBottom = 0;
+            var bgPaddingTop = 4;
+            var gapBetweenLines = 7;
+            
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+            ctx.font = '700 ' + fontSize + 'px Arial, Helvetica, sans-serif';
+            
+            var textMetrics = ctx.measureText('M');
+            var textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
+            if (textHeight <= 0) {
+                textHeight = fontSize * 0.75;
+            }
+            
+            var lineHeightForText = textHeight + gapBetweenLines;
+            var lineHeightForEmpty = 0;
+            
+            var measuredLines = [];
+            var maxWidth = 0;
+            
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                if (line.isEmpty || line.text === '') {
+                    measuredLines.push({ text: '', width: 0, segments: [], isEmpty: true });
+                    continue;
+                }
+                
+                var totalWidth = 0;
+                var segments = line.segments || [{ text: line.text, color: '#f1f1f1' }];
+                
+                for (var s = 0; s < segments.length; s++) {
+                    var metrics = ctx.measureText(segments[s].text);
+                    totalWidth += metrics.width;
+                }
+                
+                if (totalWidth > maxWidth) maxWidth = totalWidth;
+                
+                measuredLines.push({
+                    text: line.text,
+                    width: totalWidth,
+                    segments: segments,
+                    isEmpty: false,
+                    highlightColor: line.highlightColor || null
                 });
-            });
-
-            $("#downloadOutputTransparent").click(function() {
-                var element = getCaptureElement();
-                domtoimage
-                    .toBlob(element)
-                    .then(function(blob) {
-                        window.saveAs(
-                            blob,
-                            new Date()
-                            .toLocaleString()
-                            .replaceAll(",", "_")
-                            .replaceAll(" ", "_")
-                            .replaceAll("/", "-")
-                            .replace("__", "_")
-                            .replaceAll(":", "-") +
-                            "_" +
-                            "chatlog.png"
-                        );
-                    });
-            });
-
-            $("#copyOutput").click(function() {
-                var $btn = $("#copyOutput");
-                var originalText = $btn.text();
-                var element = getCaptureElement();
-
-                domtoimage.toPng(element, {
-                    bgcolor: null,
-                    style: {
-                        'background-color': 'transparent'
+            }
+            
+            var totalWidth = maxWidth + paddingLeft + paddingRight;
+            var totalHeight = bgPaddingTop + paddingTop;
+            for (var i = 0; i < measuredLines.length; i++) {
+                if (measuredLines[i].isEmpty) {
+                    totalHeight += lineHeightForEmpty;
+                } else {
+                    totalHeight += lineHeightForText;
+                }
+            }
+            
+            if (totalWidth < 10) totalWidth = 10;
+            if (totalHeight < 10) totalHeight = 10;
+            
+            canvas.width = totalWidth;
+            canvas.height = totalHeight;
+            
+            ctx.clearRect(0, 0, totalWidth, totalHeight);
+            
+            if (bgColor) {
+                var currentY = bgPaddingTop + paddingTop;
+                for (var i = 0; i < measuredLines.length; i++) {
+                    var line = measuredLines[i];
+                    if (line.isEmpty) continue;
+                    
+                    var bgWidth = line.width + paddingLeft + paddingRight;
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(0, currentY - bgPaddingTop, bgWidth, lineHeightForText + bgPaddingTop);
+                    currentY += lineHeightForText;
+                }
+            }
+            
+            ctx.font = '700 ' + fontSize + 'px Arial, Helvetica, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            
+            var currentY = bgPaddingTop + paddingTop;
+            for (var i = 0; i < measuredLines.length; i++) {
+                var line = measuredLines[i];
+                if (line.isEmpty) continue;
+                
+                var x = paddingLeft;
+                var segments = line.segments;
+                
+                for (var s = 0; s < segments.length; s++) {
+                    var segment = segments[s];
+                    var segText = segment.text;
+                    var segColor = segment.color || '#f1f1f1';
+                    
+                    var shadowOffsets = [
+                        [-1, -1], [1, -1], [-1, 1], [1, 1],
+                        [0, -1], [0, 1], [-1, 0], [1, 0]
+                    ];
+                    
+                    ctx.fillStyle = '#000000';
+                    for (var o = 0; o < shadowOffsets.length; o++) {
+                        var offsetX = shadowOffsets[o][0];
+                        var offsetY = shadowOffsets[o][1];
+                        ctx.fillText(segText, x + offsetX, currentY + offsetY);
                     }
-                })
-                .then(function(dataUrl) {
-                    return new Promise(function(resolve, reject) {
-                        var img = new Image();
-                        img.onload = function() {
-                            var canvas = document.createElement('canvas');
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            var ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
+                    
+                    ctx.fillStyle = segColor;
+                    ctx.fillText(segText, x, currentY);
+                    
+                    var metrics2 = ctx.measureText(segText);
+                    x += metrics2.width;
+                }
+                
+                currentY += lineHeightForText;
+            }
+            
+            return cropCanvasToContent(canvas);
+        }
 
-                            var croppedCanvas = cropCanvas(canvas);
-                            
-                            croppedCanvas.toBlob(function(blob) {
-                                resolve(blob);
-                            }, 'image/png');
-                        };
-                        img.onerror = function() {
-                            reject(new Error('Failed to load image'));
-                        };
-                        img.src = dataUrl;
-                    });
-                })
-                .then(function(blob) {
-                    return navigator.clipboard.write([
-                        new ClipboardItem({
-                            [blob.type]: blob
-                        })
-                    ]);
-                })
+        $("#downloadOutputTransparent").click(function() {
+            var lines = getLinesFromOutput();
+            if (lines.length === 0) {
+                alert('No content to export!');
+                return;
+            }
+            
+            var fontSize = parseInt($('#font-label').val()) || 12;
+            var showBg = localStorage.getItem('chatlog-show-bg') !== 'false';
+            var bgColor = showBg ? localStorage.getItem('chatlog-bg-color') || '#000000' : null;
+            
+            var canvas = renderToCanvas(lines, fontSize, bgColor);
+            
+            canvas.toBlob(function(blob) {
+                window.saveAs(
+                    blob,
+                    new Date()
+                    .toLocaleString()
+                    .replaceAll(",", "_")
+                    .replaceAll(" ", "_")
+                    .replaceAll("/", "-")
+                    .replace("__", "_")
+                    .replaceAll(":", "-") +
+                    "_" +
+                    "chatlog.png"
+                );
+            }, 'image/png');
+        });
+
+        $("#copyOutput").click(function() {
+            var $btn = $("#copyOutput");
+            var originalText = $btn.text();
+            
+            var lines = getLinesFromOutput();
+            if (lines.length === 0) {
+                $btn.text("No content").css("color", "#f00000");
+                setTimeout(function() {
+                    $btn.text(originalText).css("color", "");
+                }, 2000);
+                return;
+            }
+            
+            var fontSize = parseInt($('#font-label').val()) || 12;
+            var showBg = localStorage.getItem('chatlog-show-bg') !== 'false';
+            var bgColor = showBg ? localStorage.getItem('chatlog-bg-color') || '#000000' : null;
+            
+            var canvas = renderToCanvas(lines, fontSize, bgColor);
+            
+            canvas.toBlob(function(blob) {
+                navigator.clipboard.write([
+                    new ClipboardItem({
+                        [blob.type]: blob
+                    })
+                ])
                 .then(function() {
                     $btn.text("Copied!").css("color", "#56d64b");
                     setTimeout(function() {
@@ -211,50 +499,9 @@
                         $btn.text(originalText).css("color", "");
                     }, 2000);
                 });
-            });
-
-            function cropCanvas(canvas) {
-                var ctx = canvas.getContext('2d');
-                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                var data = imageData.data;
-                var w = canvas.width;
-                var h = canvas.height;
-
-                var top = h, bottom = 0, left = w, right = 0;
-                var found = false;
-
-                for (var y = 0; y < h; y++) {
-                    for (var x = 0; x < w; x++) {
-                        var idx = (y * w + x) * 4;
-                        var a = data[idx + 3];
-                        if (a > 10) {
-                            if (y < top) top = y;
-                            if (y > bottom) bottom = y;
-                            if (x < left) left = x;
-                            if (x > right) right = x;
-                            found = true;
-                        }
-                    }
-                }
-
-                if (!found) {
-                    return canvas;
-                }
-
-                var cropX = left;
-                var cropY = top;
-                var cropW = right - left + 1;
-                var cropH = bottom - top + 1;
-
-                var cropped = document.createElement('canvas');
-                cropped.width = cropW;
-                cropped.height = cropH;
-                var croppedCtx = cropped.getContext('2d');
-                croppedCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-                return cropped;
-            }
+            }, 'image/png');
         });
+    });
     </script>
 </body>
 </html>

@@ -108,6 +108,7 @@ function parseColorCodes(text) {
 
 function buildLineFromWordData(wordDataArray, tokens) {
     var result = '';
+    var currentColor = null;
 
     for (var i = 0; i < wordDataArray.length; i++) {
         var wd = wordDataArray[i];
@@ -116,21 +117,37 @@ function buildLineFromWordData(wordDataArray, tokens) {
 
         var colorForWord = null;
         for (var j = tokenIdx; j >= 0; j--) {
-            if (tokens[j].type === 'color') {
+            if (tokens[j] && tokens[j].type === 'color_hex') {
                 colorForWord = tokens[j].content;
                 break;
             }
         }
 
         if (colorForWord) {
-            result += colorForWord + word;
-        } else {
+            if (currentColor && currentColor !== colorForWord) {
+                result += '</span>';
+                currentColor = null;
+            }
+            if (!currentColor) {
+                result += '<span style="color:' + colorForWord + ';">';
+                currentColor = colorForWord;
+            }
             result += word;
+        } else {
+            if (currentColor) {
+                result += word;
+            } else {
+                result += word;
+            }
         }
 
         if (i < wordDataArray.length - 1) {
             result += ' ';
         }
+    }
+
+    if (currentColor) {
+        result += '</span>';
     }
 
     return result.trim();
@@ -154,6 +171,7 @@ function wrapAndSplit(text, width) {
             plainText += textBefore;
         }
         tokens.push({ type: 'color', content: '!{#' + match[1] + '}' });
+        tokens.push({ type: 'color_hex', content: '#' + match[1] });
         lastIndex = match.index + match[0].length;
     }
 
@@ -163,7 +181,7 @@ function wrapAndSplit(text, width) {
         plainText += remaining;
     }
 
-    if (tokens.length === 0 || tokens.every(function(t) { return t.type === 'text'; })) {
+    if (!tokens.some(function(t) { return t.type === 'color_hex'; })) {
         var words = text.split(' ');
         var lines = [];
         var currentLine = '';
@@ -193,9 +211,11 @@ function wrapAndSplit(text, width) {
 
     var wordPositions = [];
     var pos = 0;
+    
     for (var i = 0; i < tokens.length; i++) {
-        if (tokens[i].type === 'text') {
-            var textWords = tokens[i].content.split(' ');
+        var token = tokens[i];
+        if (token.type === 'text') {
+            var textWords = token.content.split(' ');
             for (var j = 0; j < textWords.length; j++) {
                 if (textWords[j]) {
                     wordPositions.push({
