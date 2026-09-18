@@ -955,8 +955,8 @@ function applyColorClass(text, colorClass) {
             return '<span class="me">' + temp + '</span>';
         case 'whisper':
             return '<span class="whisper">' + temp + '</span>';
-        case 'carwhisper':
-            return '<span class="carwhisper">' + temp + '</span>';
+        case 'carWhisper':
+            return '<span class="yellow">' + temp + '</span>';
         case 'says':
             if (/\[!\]/.test(temp)) {
                 temp = temp.replace(/\[!\]/g, '<span class="toyou">[!]</span>');
