@@ -223,7 +223,7 @@ function detectColorClass(text, isHighlighted, anyHighlighted) {
     var isSays = /says:/i.test(trimmedText) && !isWhisper && !isLow && !isLower;
     var isShout = /shouts:/i.test(trimmedText);
     var isCellphone = /\(cellphone\)/i.test(trimmedText);
-    var isEmote = /^\s*\*/.test(trimmedText);
+    var isEmote = /^\s*[\*>]/.test(trimmedText);
     var isAttempt = /attempt has (failed|succeeded)/i.test(trimmedText);
     var isRadio = /^\*\* \[S: \d+ \| CH: \d+\]/.test(trimmedText);
     var isRadioEmote = /^\*\* \[S: \d+ \| CH: \d+\] \*/.test(trimmedText);
@@ -538,7 +538,7 @@ function applyColorClass(text, colorClass) {
     var isWeather = /Weather forecast:/.test(text);
     var isWelcome = /Welcome to GTA World/.test(text);
     var isPM = /PM from|PM to/.test(text);
-    var isEmote = /^\s*\*/.test(text);
+    var isEmote = /^\s*[\*>]/.test(text);
     var isWhisper = /whispers:/i.test(text) && !/\[low\]/.test(text) && !/\[lower\]/.test(text);
     var isCarWhisper = /\(car\).*whispers:/i.test(text);
     var isLow = /\[low\]/i.test(text);
